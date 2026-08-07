@@ -125,7 +125,7 @@ async def send_dm(session, user_id):
                         print(f"[!] Skipped {user_id}: DMs closed or user blocked.")
                     elif msg_resp.status == 429:
                         print(f"[!] Rate limited! Cooling down for 10 seconds...")
-                        await asyncio.sleep(10.0)
+                        await asyncio.sleep(30.0)
                     else:
                         print(f"[!] Failed to send message to {user_id}. Status: {msg_resp.status}")
             elif dm_resp.status == 403:
@@ -137,7 +137,7 @@ async def send_dm(session, user_id):
         print(f"[!] Network timeout while messaging {user_id}. Skipping to next...")
     except aiohttp.ClientError as e:
         print(f"[!] Internet connection drop or client error: {e}. Retrying in 5 seconds...")
-        await asyncio.sleep(5.0)
+        await asyncio.sleep(20.0)
 
 async def main():
     async with aiohttp.ClientSession() as session:
@@ -159,7 +159,7 @@ async def main():
                 channel_id = channel.get("id")
                 authors = await get_channel_authors(session, channel_id)
                 collected_users.update(authors)
-                await asyncio.sleep(0.5) # Quick pause between channels
+                await asyncio.sleep(10.5) # Quick pause between channels
             
             print(f"[+] Extracted {len(collected_users)} unique active users from chat history.")
             
@@ -169,10 +169,10 @@ async def main():
                     await send_dm(session, user_id)
                     
                     # 1-second delay so Discord doesn't block you
-                    await asyncio.sleep(1.0)
+                    await asyncio.sleep(60.0)
                 except Exception as e:
                     print(f"[-] Error messaging {user_id}: {e}")
-                    await asyncio.sleep(2.0)
+                    await asyncio.sleep(60.0)
             
             print(f"[✓] Finished processing {guild_name}.")
 
