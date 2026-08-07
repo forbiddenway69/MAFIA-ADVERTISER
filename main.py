@@ -28,7 +28,7 @@ async def get_server_channels(session, guild_id):
     headers = {
         "Authorization": str(TOKEN).strip(),
         "Content-Type": "application/json",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
     }
     url = f"https://discord.com/api/v9/guilds/{guild_id}/channels"
     
@@ -47,9 +47,8 @@ async def get_channel_authors(session, channel_id):
     headers = {
         "Authorization": str(TOKEN).strip(),
         "Content-Type": "application/json",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
     }
-    # Fetch last 100 messages from the channel
     url = f"https://discord.com/api/v9/channels/{channel_id}/messages?limit=100"
     
     try:
@@ -59,6 +58,7 @@ async def get_channel_authors(session, channel_id):
                 unique_users = {}
                 for msg in messages:
                     author = msg.get("author")
+                    # Ignore bots
                     if author and not author.get("bot"):
                         unique_users[author.get("id")] = author.get("username")
                 return unique_users
@@ -66,7 +66,6 @@ async def get_channel_authors(session, channel_id):
     except Exception as e:
         print(f"[-] Failed to fetch messages for channel {channel_id}: {e}")
         return {}
-
 
 
 async def get_guild_members(session, guild_id):
@@ -143,13 +142,13 @@ async def main():
                 print(f"[-] No accessible text channels in {guild_name}. Skipping.")
                 continue
             
-            # Target the first 2 text channels to find active users
+            # Target the first 3 text channels to find active users
             collected_users = {}
-            for channel in channels[:2]:
+            for channel in channels[:3]:
                 channel_id = channel.get("id")
                 authors = await get_channel_authors(session, channel_id)
                 collected_users.update(authors)
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(0.5) # Quick pause between channels
             
             print(f"[+] Extracted {len(collected_users)} unique active users from chat history.")
             
@@ -157,6 +156,8 @@ async def main():
                 try:
                     print(f"[*] Sending DM to {username} ({user_id})...")
                     await send_dm(session, user_id)
+                    
+                    # 1-second delay so Discord doesn't block you
                     await asyncio.sleep(1.0)
                 except Exception as e:
                     print(f"[-] Error messaging {user_id}: {e}")
