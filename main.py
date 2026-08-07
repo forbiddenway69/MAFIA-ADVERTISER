@@ -55,18 +55,24 @@ async def get_channel_authors(session, channel_id):
         async with session.get(url, headers=headers, timeout=10) as response:
             if response.status == 200:
                 messages = await response.json()
-                print(f"  [DEBUG] Successfully fetched {len(messages)} messages from channel {channel_id}")
+                print(f"  [DEBUG] Fetched {len(messages)} messages from channel {channel_id}")
                 
                 unique_users = {}
                 for msg in messages:
                     author = msg.get("author")
-                    # Ignore bots
-                    if author and not author.get("bot"):
-                        unique_users[author.get("id")] = author.get("username")
+                    if author:
+                        username = author.get("username")
+                        is_bot = author.get("bot", False)
+                        
+                        # Print the first message author to see who is chatting
+                        if msg == messages[0]:
+                            print(f"    -> Most recent message here was from: {username} (Bot: {is_bot})")
+                        
+                        if not is_bot:
+                            unique_users[author.get("id")] = username
+                            
                 return unique_users
             else:
-                text = await response.text()
-                print(f"  [DEBUG] Denied reading channel {channel_id}. Status: {response.status} | {text[:100]}")
                 return {}
     except Exception as e:
         print(f"[-] Failed to fetch messages for channel {channel_id}: {e}")
@@ -149,7 +155,7 @@ async def main():
             
             # Target the first 3 text channels to find active users
             collected_users = {}
-            for channel in channels[:3]:
+            for channel in channels[:10]:
                 channel_id = channel.get("id")
                 authors = await get_channel_authors(session, channel_id)
                 collected_users.update(authors)
