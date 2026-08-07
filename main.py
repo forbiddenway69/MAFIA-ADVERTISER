@@ -28,19 +28,25 @@ async def get_guild_members(session, guild_id):
     headers = {
         "Authorization": str(TOKEN).strip(),
         "Content-Type": "application/json",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
-    # Using the search/list endpoint which is more accessible for user tokens
-    url = f"https://discord.com/api/v9/guilds/{guild_id}/memberssearch?limit=1000"
+    url = f"https://discord.com/api/v9/guilds/{guild_id}/members?limit=1000"
     
     async with session.get(url, headers=headers) as response:
+        print(f"[DEBUG] Guild {guild_id} members fetch status: {response.status}")
+        text_data = await response.text()
+        print(f"[DEBUG] Response text length: {len(text_data)}")
+        
         if response.status == 200:
-            data = await response.json()
-            # The search endpoint returns a dictionary containing 'members' key
-            return data.get("members", [])
+            import json
+            try:
+                data = json.loads(text_data)
+                return data if isinstance(data, list) else data.get("members", [])
+            except Exception as e:
+                print(f"[-] JSON parse error: {e}")
+                return []
         else:
-            print(f"[-] Failed to fetch members for guild {guild_id}. Status: {response.status}")
-            print(await response.text())
+            print(f"[-] Failed to fetch members: {text_data[:200]}config")
             return []
 
 async def send_dm(session, user_id):
