@@ -197,7 +197,7 @@ async def main():
                     
                     # 35-second delay before moving to the next user
                     await asyncio.sleep(45.0)
-                except Exception as e:
+    except Exception as e:
                     print(f"[-] Error with {user_id}: {e}")
                     await asyncio.sleep(45.0)
             
