@@ -30,25 +30,22 @@ async def get_guild_members(session, guild_id):
         "Content-Type": "application/json",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
-    url = f"https://discord.com/api/v9/guilds/{guild_id}/members?limit=1000"
+    # Using the members search endpoint with a wildcard query to fetch users
+    url = f"https://discord.com/api/v9/guilds/{guild_id}/members/search?query=&limit=1000"
     
-    async with session.get(url, headers=headers) as response:
-        print(f"[DEBUG] Guild {guild_id} members fetch status: {response.status}")
-        text_data = await response.text()
-        print(f"[DEBUG] Response text length: {len(text_data)}")
-        
-        if response.status == 200:
-            import json
-            try:
-                data = json.loads(text_data)
-                return data if isinstance(data, list) else data.get("members", [])
-            except Exception as e:
-                print(f"[-] JSON parse error: {e}")
+    try:
+        async with session.get(url, headers=headers, timeout=10) as response:
+            print(f"[DEBUG] Search endpoint status: {response.status}")
+            if response.status == 200:
+                members = await response.json()
+                return members
+            else:
+                text = await response.text()
+                print(f"[-] Search failed: {text[:150]}")
                 return []
-        else:
-            print(f"[-] Failed to fetch members: {text_data[:200]}config")
-            return []
-
+    except Exception as e:
+        print(f"[-] Request error: {e}")
+        return []
 async def send_dm(session, user_id):
     headers = {
         "Authorization": str(TOKEN).strip(),
