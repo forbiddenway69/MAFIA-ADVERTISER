@@ -9,9 +9,9 @@ MESSAGE_CONTENT = "Hello, IF YOURE READING THIS YOU BETTER JOIN THIS https://dis
 
 async def get_my_guilds(session):
     headers = {
-        "Authorization": TOKEN,
+        "Authorization": str(TOKEN).strip(),
         "Content-Type": "application/json",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
     }
     url = "https://discord.com/api/v9/users/@me/guilds"
     
@@ -22,8 +22,60 @@ async def get_my_guilds(session):
             return guilds
         else:
             print(f"Failed to fetch servers. Status: {response.status}")
-            print(await response.text())
             return []
+
+async def get_guild_members(session, guild_id):
+    headers = {
+        "Authorization": str(TOKEN).strip(),
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+    }
+    url = f"https://discord.com/api/v9/guilds/{guild_id}/members?limit=1000"
+    
+    async with session.get(url, headers=headers) as response:
+        if response.status == 200:
+            return await response.json()
+        else:
+            print(f"[-] Failed to fetch members for guild {guild_id}. Status: {response.status}")
+            return []
+
+async def send_dm(session, user_id):
+    headers = {
+        "Authorization": str(TOKEN).strip(),
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+    }
+    
+    payload = {"recipient_id": user_id}
+    
+    try:
+        # Wrap the request in a try/except to handle internet drops / timeouts
+        async with session.post("https://discord.com/api/v9/users/@me/channels", headers=headers, json=payload, timeout=10) as dm_resp:
+            if dm_resp.status == 200:
+                dm_data = await dm_resp.json()
+                channel_id = dm_data.get("id")
+                
+                msg_payload = {"content": MESSAGE_CONTENT}
+                async with session.post(f"https://discord.com/api/v9/channels/{channel_id}/messages", headers=headers, json=msg_payload, timeout=10) as msg_resp:
+                    if msg_resp.status == 200:
+                        print(f"[✓] Successfully sent DM to user ID: {user_id}")
+                    elif msg_resp.status == 403:
+                        print(f"[!] Skipped {user_id}: DMs closed or user blocked.")
+                    elif msg_resp.status == 429:
+                        print(f"[!] Rate limited! Cooling down for 10 seconds...")
+                        await asyncio.sleep(10.0)
+                    else:
+                        print(f"[!] Failed to send message to {user_id}. Status: {msg_resp.status}")
+            elif dm_resp.status == 403:
+                print(f"[!] Skipped {user_id}: Cannot open DM channel (Closed DMs).")
+            else:
+                print(f"[!] Failed to open DM channel with {user_id}. Status: {dm_resp.status}")
+                
+    except asyncio.TimeoutError:
+        print(f"[!] Network timeout while messaging {user_id}. Skipping to next...")
+    except aiohttp.ClientError as e:
+        print(f"[!] Internet connection drop or client error: {e}. Retrying in 5 seconds...")
+        await asyncio.sleep(5.0)
 
 async def main():
     async with aiohttp.ClientSession() as session:
