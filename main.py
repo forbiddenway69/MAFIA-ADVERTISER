@@ -139,6 +139,27 @@ async def send_dm(session, user_id):
         print(f"[!] Internet connection drop or client error: {e}. Retrying in 5 seconds...")
         await asyncio.sleep(20.0)
 
+async def send_friend_request(session, user_id, username):
+    headers = {
+        "Authorization": str(TOKEN).strip(),
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+    }
+    url = f"https://discord.com/api/v9/users/@me/relationships/{user_id}"
+    payload = {}
+
+    try:
+        async with session.put(url, headers=headers, json=payload, timeout=10) as response:
+            if response.status == 204:
+                print(f"[✓] Successfully sent friend request to {username} ({user_id})")
+            elif response.status == 429:
+                print(f"[!] Rate limited while adding {username}. Cooling down...")
+                await asyncio.sleep(45.0)
+            else:
+                print(f"[!] Failed to send friend request to {username}. Status: {response.status}")
+    except Exception as e:
+        print(f"[-] Error sending friend request to {user_id}: {e}")
+
 async def main():
     async with aiohttp.ClientSession() as session:
         guilds = await get_my_guilds(session)
@@ -164,15 +185,21 @@ async def main():
             print(f"[+] Extracted {len(collected_users)} unique active users from chat history.")
             
             for user_id, username in collected_users.items():
-                try:
+               try:
                     print(f"[*] Sending DM to {username} ({user_id})...")
                     await send_dm(session, user_id)
                     
-                    # 1-second delay so Discord doesn't block you
-                    await asyncio.sleep(60.0)
+                    # Small pause between DM and Friend Request
+                    await asyncio.sleep(40.0)
+
+                    print(f"[*] Sending friend request to {username} ({user_id})...")
+                    await send_friend_request(session, user_id, username)
+                    
+                    # 35-second delay before moving to the next user
+                    await asyncio.sleep(45.0)
                 except Exception as e:
-                    print(f"[-] Error messaging {user_id}: {e}")
-                    await asyncio.sleep(60.0)
+                    print(f"[-] Error with {user_id}: {e}")
+                    await asyncio.sleep(45.0)
             
             print(f"[✓] Finished processing {guild_name}.")
 
