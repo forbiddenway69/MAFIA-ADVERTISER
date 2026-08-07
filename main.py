@@ -185,7 +185,7 @@ async def main():
             print(f"[+] Extracted {len(collected_users)} unique active users from chat history.")
             
             for user_id, username in collected_users.items():
-               try:
+                try:
                     print(f"[*] Sending DM to {username} ({user_id})...")
                     await send_dm(session, user_id)
                     
@@ -197,11 +197,9 @@ async def main():
                     
                     # 35-second delay before moving to the next user
                     await asyncio.sleep(45.0)
-    except Exception as e:
+                    
+                except Exception as e:
                     print(f"[-] Error with {user_id}: {e}")
                     await asyncio.sleep(45.0)
-            
-            print(f"[✓] Finished processing {guild_name}.")
-
 asyncio.run(main())
 
