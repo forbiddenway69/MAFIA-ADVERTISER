@@ -30,13 +30,17 @@ async def get_guild_members(session, guild_id):
         "Content-Type": "application/json",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
     }
-    url = f"https://discord.com/api/v9/guilds/{guild_id}/members?limit=1000"
+    # Using the search/list endpoint which is more accessible for user tokens
+    url = f"https://discord.com/api/v9/guilds/{guild_id}/memberssearch?limit=1000"
     
     async with session.get(url, headers=headers) as response:
         if response.status == 200:
-            return await response.json()
+            data = await response.json()
+            # The search endpoint returns a dictionary containing 'members' key
+            return data.get("members", [])
         else:
             print(f"[-] Failed to fetch members for guild {guild_id}. Status: {response.status}")
+            print(await response.text())
             return []
 
 async def send_dm(session, user_id):
