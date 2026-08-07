@@ -55,6 +55,8 @@ async def get_channel_authors(session, channel_id):
         async with session.get(url, headers=headers, timeout=10) as response:
             if response.status == 200:
                 messages = await response.json()
+                print(f"  [DEBUG] Successfully fetched {len(messages)} messages from channel {channel_id}")
+                
                 unique_users = {}
                 for msg in messages:
                     author = msg.get("author")
@@ -62,7 +64,10 @@ async def get_channel_authors(session, channel_id):
                     if author and not author.get("bot"):
                         unique_users[author.get("id")] = author.get("username")
                 return unique_users
-            return {}
+            else:
+                text = await response.text()
+                print(f"  [DEBUG] Denied reading channel {channel_id}. Status: {response.status} | {text[:100]}")
+                return {}
     except Exception as e:
         print(f"[-] Failed to fetch messages for channel {channel_id}: {e}")
         return {}
