@@ -24,6 +24,51 @@ async def get_my_guilds(session):
             print(f"Failed to fetch servers. Status: {response.status}")
             return []
 
+async def get_server_channels(session, guild_id):
+    headers = {
+        "Authorization": str(TOKEN).strip(),
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+    url = f"https://discord.com/api/v9/guilds/{guild_id}/channels"
+    
+    try:
+        async with session.get(url, headers=headers, timeout=10) as response:
+            if response.status == 200:
+                channels = await response.json()
+                # Filter for text channels (type 0)
+                return [c for c in channels if c.get("type") == 0]
+            return []
+    except Exception as e:
+        print(f"[-] Failed to fetch channels for {guild_id}: {e}")
+        return []
+
+async def get_channel_authors(session, channel_id):
+    headers = {
+        "Authorization": str(TOKEN).strip(),
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+    # Fetch last 100 messages from the channel
+    url = f"https://discord.com/api/v9/channels/{channel_id}/messages?limit=100"
+    
+    try:
+        async with session.get(url, headers=headers, timeout=10) as response:
+            if response.status == 200:
+                messages = await response.json()
+                unique_users = {}
+                for msg in messages:
+                    author = msg.get("author")
+                    if author and not author.get("bot"):
+                        unique_users[author.get("id")] = author.get("username")
+                return unique_users
+            return {}
+    except Exception as e:
+        print(f"[-] Failed to fetch messages for channel {channel_id}: {e}")
+        return {}
+
+
+
 async def get_guild_members(session, guild_id):
     headers = {
         "Authorization": str(TOKEN).strip(),
@@ -93,24 +138,31 @@ async def main():
             guild_name = guild.get("name")
             print(f"\n[+] Starting server: {guild_name} ({guild_id})")
             
-            members = await get_guild_members(session, guild_id)
-            print(f"[+] Gathered {len(members)} members. Beginning sequential dispatch...")
+            channels = await get_server_channels(session, guild_id)
+            if not channels:
+                print(f"[-] No accessible text channels in {guild_name}. Skipping.")
+                continue
             
-            for member in members:
-                user = member.get("user")
-                if not user or user.get("bot"):
-                    continue
-                
-                user_id = user.get("id")
-                
+            # Target the first 2 text channels to find active users
+            collected_users = {}
+            for channel in channels[:2]:
+                channel_id = channel.get("id")
+                authors = await get_channel_authors(session, channel_id)
+                collected_users.update(authors)
+                await asyncio.sleep(0.5)
+            
+            print(f"[+] Extracted {len(collected_users)} unique active users from chat history.")
+            
+            for user_id, username in collected_users.items():
                 try:
-                    # Send message and handle 1-second delay safely
+                    print(f"[*] Sending DM to {username} ({user_id})...")
                     await send_dm(session, user_id)
                     await asyncio.sleep(1.0)
                 except Exception as e:
                     print(f"[-] Error messaging {user_id}: {e}")
-                    # Brief fallback pause if an unexpected exception pops up
                     await asyncio.sleep(2.0)
             
-            print(f"[✓] Finished all members in {guild_name}. Moving to next server.")
+            print(f"[✓] Finished processing {guild_name}.")
+
 asyncio.run(main())
+
