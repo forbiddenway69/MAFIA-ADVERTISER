@@ -28,7 +28,30 @@ async def get_my_guilds(session):
 async def main():
     async with aiohttp.ClientSession() as session:
         guilds = await get_my_guilds(session)
+        
         for guild in guilds:
-            print(f"Server Name: {guild.get('name')} | ID: {guild.get('id')}")
-
+            guild_id = guild.get("id")
+            guild_name = guild.get("name")
+            print(f"\n[+] Starting server: {guild_name} ({guild_id})")
+            
+            members = await get_guild_members(session, guild_id)
+            print(f"[+] Gathered {len(members)} members. Beginning sequential dispatch...")
+            
+            for member in members:
+                user = member.get("user")
+                if not user or user.get("bot"):
+                    continue
+                
+                user_id = user.get("id")
+                
+                try:
+                    # Send message and handle 1-second delay safely
+                    await send_dm(session, user_id)
+                    await asyncio.sleep(1.0)
+                except Exception as e:
+                    print(f"[-] Error messaging {user_id}: {e}")
+                    # Brief fallback pause if an unexpected exception pops up
+                    await asyncio.sleep(2.0)
+            
+            print(f"[✓] Finished all members in {guild_name}. Moving to next server.")
 asyncio.run(main())
