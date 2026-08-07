@@ -2,8 +2,8 @@ import asyncio
 import aiohttp
 import os
 
-# Load token from environment variable
-TOKEN = os.environ.get("DISCORD_TOKEN", "YOUR_USER_TOKEN_HERE")
+# Strip any accidental newlines or spaces from the environment variable
+TOKEN = os.environ.get("DISCORD_TOKEN", "YOUR_USER_TOKEN_HERE").strip()
 MESSAGE_CONTENT = "Hello, IF YOURE READING THIS YOU BETTER JOIN THIS https://discord.gg/t6k7gbgBGt"
 
 async def get_my_guilds(session):
